@@ -1,4 +1,4 @@
-// pages/CategoriesSection.jsx
+// pages/CategoriesSection.jsx - Frontend Randomization
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
@@ -83,6 +83,16 @@ const getUserData = () => {
     console.error('Error getting user data:', e);
     return null;
   }
+};
+
+// Fisher-Yates shuffle algorithm for randomizing array
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 };
 
 // Product Card Component
@@ -290,7 +300,7 @@ const SubscriptionStatusBanner = ({ hasSubscription, onSubscribe }) => {
           <CheckCircle className="text-green-500" size={20} />
           <div className="flex-1">
             <p className="text-green-800 font-medium">
-              You have an active subscription! You can connect with sellers and add products.
+              You have an active subscription! You can list products for sale.
             </p>
           </div>
         </div>
@@ -305,10 +315,10 @@ const SubscriptionStatusBanner = ({ hasSubscription, onSubscribe }) => {
           <Info className="text-yellow-500" size={20} />
           <div>
             <p className="text-yellow-800 font-medium">
-              Subscription required to connect with sellers and add products
+              Subscription required to list products for sale
             </p>
             <p className="text-sm text-yellow-600">
-              Get access to all features with a monthly or yearly plan
+              You can still browse and connect with sellers for free!
             </p>
           </div>
         </div>
@@ -316,7 +326,7 @@ const SubscriptionStatusBanner = ({ hasSubscription, onSubscribe }) => {
           onClick={onSubscribe}
           className="px-6 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-600 transition-all duration-300 whitespace-nowrap"
         >
-          Subscribe Now
+          Become a Seller
         </button>
       </div>
     </div>
@@ -335,7 +345,8 @@ export default function CategoriesSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedState, setSelectedState] = useState("Location");
   const [searchQuery, setSearchQuery] = useState("");
-  const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Store ALL products
+  const [displayedProducts, setDisplayedProducts] = useState([]); // Store randomized 48 products
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [filters, setFilters] = useState({
@@ -350,126 +361,189 @@ export default function CategoriesSection() {
   const [isConnecting, setIsConnecting] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [connectedProduct, setConnectedProduct] = useState(null);
+  const [totalProducts, setTotalProducts] = useState(0);
+  
+  // Add ref to track if initial fetch is done
+  const initialFetchDone = useRef(false);
 
   // Check subscription on mount
   useEffect(() => {
     checkSubscription();
   }, [checkSubscription]);
 
-  // Fetch products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_URL}/allproduct`);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        const transformedProducts = data.map((item) => {
-          // Parse image URL
-          let imageUrl = "";
-          try {
-            if (item.image_url) {
-              const imageArray = JSON.parse(item.image_url);
-              if (Array.isArray(imageArray) && imageArray.length > 0) {
-                imageUrl = imageArray[0];
-              }
-            }
-          } catch (error) {
-            imageUrl = item.image_url || item.image || item.photo || "";
-          }
-
-          // Map category
-          let category = "Others";
-          if (item.category_id) {
-            const categoryMap = {
-              "1": "Gadgets", "2": "Vehicles", "3": "Houses", "4": "Fashion",
-              "5": "Jobs", "6": "Cosmetics", "7": "Fruits", "8": "Kitchen Utensils"
-            };
-            category = categoryMap[item.category_id] || "Others";
-          } else {
-            category = item.category || item.product_category || "Others";
-          }
-
-          const actualPrice = item.actual_price ? parseFloat(item.actual_price) : 0;
-          const promoPrice = item.promo_price ? parseFloat(item.promo_price) : null;
-          const hasPromo = promoPrice && promoPrice < actualPrice;
-          const productId = item.product_id || item.id;
-
-          return {
-            id: productId,
-            name: item.title || item.name || item.product_name || "Unnamed Product",
-            price: item.ask_for_price ? "Contact Seller" : (hasPromo ? `₦${promoPrice.toLocaleString()}` : `₦${actualPrice.toLocaleString()}`),
-            actual_price: actualPrice > 0 ? `₦${actualPrice.toLocaleString()}` : "",
-            promo_price: promoPrice ? `₦${promoPrice.toLocaleString()}` : "",
-            condition: item.condition || "Others",
-            category,
-            image: imageUrl,
-            seller_verified: item.badge_status === "1" || item.verify_status === "1",
-            location: item.location || item.product_location || "Unknown",
-            ask_for_price: item.ask_for_price || false,
-            description: item.description || item.product_description || "",
-            seller_id: item.seller_id || item.user_id,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-            sold: item.sold || "0"
-          };
-        });
-
-        setProducts(transformedProducts);
-        setFilteredProducts(transformedProducts);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        showToast('error', 'Failed to load products. Please refresh the page.', 'Error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
+  // Function to get random products from all products
+  const getRandomProducts = useCallback((products, count = 48) => {
+    if (!products || products.length === 0) return [];
+    
+    // Shuffle the array and take first 'count' items
+    const shuffled = shuffleArray(products);
+    return shuffled.slice(0, Math.min(count, products.length));
   }, []);
 
-  // Filter products
-  const filteredProductsMemo = useMemo(() => {
-    let filtered = products;
+  // Fetch ALL products
+  const fetchAllProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching all products...');
+      
+      const response = await fetch(`${API_URL}/allproduct`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Handle different response formats based on your updated backend
+      let productsArray = [];
+      if (data.data && Array.isArray(data.data)) {
+        productsArray = data.data;
+        setTotalProducts(data.total || productsArray.length);
+      } else if (Array.isArray(data)) {
+        productsArray = data;
+        setTotalProducts(productsArray.length);
+      } else if (data.products && Array.isArray(data.products)) {
+        productsArray = data.products;
+        setTotalProducts(data.total || productsArray.length);
+      }
+      
+      console.log(`Total products fetched: ${productsArray.length}`);
+      
+      // Transform the products
+      const transformedProducts = productsArray.map((item) => {
+        // Parse image URL
+        let imageUrl = "";
+        try {
+          if (item.image_url) {
+            if (typeof item.image_url === 'string' && item.image_url.startsWith('[')) {
+              const parsed = JSON.parse(item.image_url);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                imageUrl = parsed[0];
+              }
+            } else {
+              imageUrl = item.image_url;
+            }
+          } else if (item.image) {
+            imageUrl = item.image;
+          } else if (item.photo) {
+            imageUrl = item.photo;
+          }
+        } catch (error) {
+          imageUrl = item.image_url || item.image || item.photo || "";
+        }
 
-    if (selectedCategory !== "All") {
+        // Map category
+        let category = "Others";
+        if (item.category_id) {
+          const categoryMap = {
+            "1": "Gadgets", "2": "Vehicles", "3": "Houses", "4": "Fashion",
+            "5": "Jobs", "6": "Cosmetics", "7": "Fruits", "8": "Kitchen Utensils"
+          };
+          category = categoryMap[item.category_id] || "Others";
+        } else {
+          category = item.category || item.product_category || "Others";
+        }
+
+        const actualPrice = item.actual_price ? parseFloat(item.actual_price) : 0;
+        const promoPrice = item.promo_price ? parseFloat(item.promo_price) : null;
+        const hasPromo = promoPrice && promoPrice < actualPrice;
+        const productId = item.product_id || item.id;
+
+        return {
+          id: productId,
+          name: item.title || item.name || item.product_name || "Unnamed Product",
+          price: item.ask_for_price ? "Contact Seller" : (hasPromo ? `₦${promoPrice?.toLocaleString()}` : `₦${actualPrice.toLocaleString()}`),
+          actual_price: actualPrice > 0 ? `₦${actualPrice.toLocaleString()}` : "",
+          promo_price: promoPrice ? `₦${promoPrice?.toLocaleString()}` : "",
+          condition: item.condition || "Others",
+          category,
+          image: imageUrl,
+          seller_verified: item.badge_status === "1" || item.verify_status === "1" || false,
+          location: item.location || item.product_location || "Unknown",
+          ask_for_price: item.ask_for_price || false,
+          description: item.description || item.product_description || "",
+          seller_id: item.seller_id || item.user_id,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          sold: item.sold || "0"
+        };
+      });
+
+      setAllProducts(transformedProducts);
+      
+      // Get random 48 products for display
+      const randomProducts = getRandomProducts(transformedProducts, 48);
+      setDisplayedProducts(randomProducts);
+      setFilteredProducts(randomProducts);
+      
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      showToast('error', 'Failed to load products. Please refresh the page.', 'Error');
+    } finally {
+      setLoading(false);
+    }
+  }, [getRandomProducts]);
+
+  // Initial fetch - only once
+  useEffect(() => {
+    if (!initialFetchDone.current) {
+      fetchAllProducts();
+      initialFetchDone.current = true;
+    }
+  }, [fetchAllProducts]);
+
+  // Function to refresh/randomize products
+  const refreshProducts = useCallback(() => {
+    if (allProducts.length > 0) {
+      const newRandomProducts = getRandomProducts(allProducts, 48);
+      setDisplayedProducts(newRandomProducts);
+      
+      // Apply current filters to the new random set
+      const filtered = applyFilters(newRandomProducts, selectedCategory, filters, selectedState);
+      setFilteredProducts(filtered);
+      
+      showToast('info', 'Products refreshed! Showing new random selection.', 'Refreshed');
+    }
+  }, [allProducts, getRandomProducts, selectedCategory, filters, selectedState]);
+
+  // Apply filters to products
+  const applyFilters = useCallback((productsToFilter, category, filterState, location) => {
+    let filtered = [...productsToFilter];
+
+    if (category !== "All") {
       filtered = filtered.filter(product =>
-        product.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        selectedCategory.toLowerCase().includes(product.category.toLowerCase())
+        product.category.toLowerCase().includes(category.toLowerCase()) ||
+        category.toLowerCase().includes(product.category.toLowerCase())
       );
     }
 
-    if (filters.condition !== "All") {
+    if (filterState.condition !== "All") {
       filtered = filtered.filter(product => {
-        if (filters.condition === "Others") {
+        if (filterState.condition === "Others") {
           return !["new", "fairly used", "used"].includes(product.condition.toLowerCase());
         }
-        return product.condition.toLowerCase() === filters.condition.toLowerCase();
+        return product.condition.toLowerCase() === filterState.condition.toLowerCase();
       });
     }
 
-    if (filters.verifiedSeller) {
+    if (filterState.verifiedSeller) {
       filtered = filtered.filter(product => product.seller_verified);
     }
 
-    if (selectedState !== "Location") {
+    if (location !== "Location") {
       filtered = filtered.filter(product =>
-        product.location.toLowerCase().includes(selectedState.toLowerCase())
+        product.location.toLowerCase().includes(location.toLowerCase())
       );
     }
 
     return filtered;
-  }, [products, selectedCategory, filters, selectedState]);
+  }, []);
 
-  // Update filtered products
+  // Filter products when filters change
   useEffect(() => {
-    setFilteredProducts(filteredProductsMemo);
-  }, [filteredProductsMemo]);
+    const filtered = applyFilters(displayedProducts, selectedCategory, filters, selectedState);
+    setFilteredProducts(filtered);
+  }, [displayedProducts, selectedCategory, filters, selectedState, applyFilters]);
 
   // Scroll categories
   const scroll = useCallback((direction) => {
@@ -525,7 +599,6 @@ export default function CategoriesSection() {
       return;
     }
 
-    // Check subscription status
     const isSubscribed = await checkSubscription();
     
     if (!isSubscribed) {
@@ -555,18 +628,6 @@ export default function CategoriesSection() {
       return;
     }
 
-    // Check subscription status
-    const isSubscribed = await checkSubscription();
-    
-    if (!isSubscribed) {
-      showToast('warning', 'You need an active subscription to connect with sellers', 'Subscription Required', {
-        label: 'View Plans',
-        onClick: () => navigate('/pricing')
-      });
-      navigate('/pricing');
-      return;
-    }
-
     setIsConnecting(product.id);
 
     try {
@@ -588,11 +649,9 @@ export default function CategoriesSection() {
       if (data.status === true || data.success === true) {
         showToast('success', `Interest sent! Seller will contact you.`, 'Success! 🎯');
         
-        // Store product and show review modal
         setConnectedProduct(product);
         setShowReviewModal(true);
         
-        // Navigate to product page
         setTimeout(() => {
           navigate(`/products/${product.id}`);
         }, 1500);
@@ -605,7 +664,7 @@ export default function CategoriesSection() {
       showToast('error', 'Network error. Please check your connection.', 'Error');
       setIsConnecting(null);
     }
-  }, [navigate, checkSubscription]);
+  }, [navigate]);
 
   const filteredStates = useMemo(() =>
     NIGERIAN_STATES.filter((state) =>
@@ -621,8 +680,26 @@ export default function CategoriesSection() {
           <div className="text-left">
             <h2 className="text-3xl font-bold text-black">Select product category</h2>
             <p className="text-gray-600 mt-2">(choose a category to filter your search)</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Showing {filteredProducts.length} of {totalProducts} products
+            </p>
           </div>
-          <div className="text-right">
+          <div className="text-right flex items-center gap-2">
+            {/* Refresh/Randomize Button */}
+            <button
+              onClick={refreshProducts}
+              className="flex items-center gap-2 bg-yellow-500 text-black px-4 py-2 rounded-lg text-sm hover:bg-yellow-600 transition-all duration-300 shadow-sm hover:scale-105"
+              title="Show different products"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 16h5v5"/>
+              </svg>
+              <span className="hidden sm:inline">Shuffle Products</span>
+            </button>
+            
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm hover:bg-yellow-100 transition-all duration-300 bg-white shadow-sm hover:scale-105"
@@ -843,7 +920,7 @@ export default function CategoriesSection() {
           <div className="rounded-xl shadow p-6">
             {loading ? (
               <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
@@ -853,16 +930,18 @@ export default function CategoriesSection() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onProductClick={handleProductClick}
-                    onConnectClick={handleConnectClick}
-                    isConnecting={isConnecting === product.id}
-                  />
-                ))}
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onProductClick={handleProductClick}
+                      onConnectClick={handleConnectClick}
+                      isConnecting={isConnecting === product.id}
+                    />
+                  ))}
+                </div>
 
                 {/* Promo Banner */}
                 {showPromoBanner && filteredProducts.length > 0 && (
@@ -908,7 +987,7 @@ export default function CategoriesSection() {
                     </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -936,6 +1015,20 @@ export default function CategoriesSection() {
           >
             <X size={18} />
             <span className="hidden sm:inline">Reset</span>
+          </button>
+          
+          {/* Mobile Refresh Button */}
+          <button
+            onClick={refreshProducts}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium py-3 px-4 rounded-lg shadow transition-all duration-300 transform hover:scale-105 active:scale-95"
+            title="Shuffle products"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 16h5v5"/>
+            </svg>
           </button>
         </div>
 
