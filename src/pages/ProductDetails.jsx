@@ -1,4 +1,4 @@
-// pages/ProductDetails.jsx (Ultra Simple Version)
+// pages/ProductDetails.jsx (Fixed modal order - WhatsApp first, then Review)
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IoIosContact } from "react-icons/io";
@@ -13,9 +13,11 @@ import {
   ChevronRight,
   Store,
   X,
-  AlertCircle
+  AlertCircle,
+  Star
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import ReviewPromptModal from '../components/ReviewPromptModal';
 
 const API_URL = 'https://loopmart.ng/api';
 
@@ -50,8 +52,8 @@ const getImageUrl = (imagePath) => {
   return `https://loopmart.ng/uploads/products/${imagePath}`;
 };
 
-// WhatsApp Modal
-const WhatsAppModal = ({ isOpen, onClose, sellerName, sellerPhone, productName, location }) => {
+// WhatsApp Modal Component
+const WhatsAppModal = ({ isOpen, onClose, sellerName, sellerPhone, productName, location, onContinue }) => {
   if (!isOpen) return null;
 
   const handleWhatsAppClick = () => {
@@ -59,41 +61,126 @@ const WhatsAppModal = ({ isOpen, onClose, sellerName, sellerPhone, productName, 
       alert('Seller phone number not available');
       return;
     }
+    
+    // Remove any non-numeric characters from phone
+    const cleanPhone = sellerPhone.replace(/[^0-9]/g, '');
     const message = `Hello! I'm interested in your product "${productName}" on LoopMart.`;
-    const whatsappUrl = `https://wa.me/${sellerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleContinue = () => {
+    onClose();
+    if (onContinue) {
+      onContinue();
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-lg" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6">
-        <button onClick={onClose} className="absolute top-4 right-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-lg" onClick={handleContinue} />
+      
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <button 
+          onClick={handleContinue} 
+          className="absolute top-4 right-4 z-10 p-2 text-gray-400 hover:text-gray-600 transition-colors hover:bg-gray-100 rounded-full"
+        >
           <X size={24} />
         </button>
-        
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IoIosContact size={30} className="text-white" />
+
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <IoIosContact size={32} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Contact Seller</h2>
+            <p className="text-gray-600">Connect with the seller via WhatsApp</p>
           </div>
-          <h2 className="text-2xl font-bold">Contact Seller</h2>
-        </div>
 
-        <div className="bg-gray-50 rounded-xl p-4 mb-4">
-          <p><span className="font-medium">Seller:</span> {sellerName}</p>
-          <p><span className="font-medium">Phone:</span> {sellerPhone || 'N/A'}</p>
-          <p><span className="font-medium">Location:</span> {location}</p>
-        </div>
+          <div className="bg-gray-50 rounded-xl p-5 mb-5 border border-gray-200">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Seller Name:</span>
+                <span className="font-semibold text-gray-800">{sellerName || "Anonymous Seller"}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Phone:</span>
+                <span className="font-semibold text-green-600">
+                  {sellerPhone || "Not available"}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Location:</span>
+                <span className="font-semibold text-gray-800">{location || "Unknown"}</span>
+              </div>
+            </div>
+          </div>
 
-        {sellerPhone ? (
-          <button onClick={handleWhatsAppClick} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold">
-            Open WhatsApp
+          {sellerPhone ? (
+            <button 
+              onClick={handleWhatsAppClick} 
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 shadow-lg"
+            >
+              <MessageCircle size={20} />
+              <span>Open WhatsApp</span>
+            </button>
+          ) : (
+            <div className="w-full bg-gray-100 text-gray-500 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2">
+              <Phone size={20} />
+              <span>Phone Number Not Available</span>
+            </div>
+          )}
+
+          <button 
+            onClick={handleContinue} 
+            className="w-full mt-3 text-gray-600 hover:text-gray-800 font-medium py-2 px-4 rounded-xl border border-gray-300 hover:border-gray-400 transition-all"
+          >
+            Continue Browsing
           </button>
-        ) : (
-          <div className="w-full bg-gray-100 text-gray-500 py-3 rounded-xl text-center">
-            Phone Not Available
-          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Related Product Card Component
+const RelatedProductCard = ({ product, onClick }) => {
+  return (
+    <div 
+      onClick={onClick}
+      className="bg-white rounded-xl border p-3 cursor-pointer hover:shadow-lg transition-all group"
+    >
+      <div className="relative h-40 bg-gray-100 rounded-lg mb-3 overflow-hidden">
+        <img 
+          src={product.image} 
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/200x150?text=No+Image';
+          }}
+        />
+        {product.condition && (
+          <span className={`absolute top-2 right-2 px-2 py-1 text-xs rounded-full ${getConditionBadgeColor(product.condition)}`}>
+            {product.condition}
+          </span>
         )}
+      </div>
+      
+      <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2 text-sm">
+        {product.name}
+      </h3>
+      
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-bold text-red-600 text-lg">
+          {product.price}
+        </span>
+      </div>
+      
+      <div className="flex items-center gap-1 text-xs text-gray-500">
+        <MapPin size={12} />
+        <span className="truncate">{product.location}</span>
       </div>
     </div>
   );
@@ -107,18 +194,21 @@ export default function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [images, setImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [sellerProducts, setSellerProducts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [sellerPhone, setSellerPhone] = useState('');
 
-  // Single fetch effect
+  // Fetch product details
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
         
-        // Get token
         const token = localStorage.getItem('loopmart_token');
         if (!token) {
           navigate('/login');
@@ -132,7 +222,7 @@ export default function ProductDetails() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Failed to fetch');
+        if (!response.ok) throw new Error('Failed to fetch product');
         
         const data = await response.json();
         console.log('Product data:', data);
@@ -155,56 +245,152 @@ export default function ProductDetails() {
           }
         }
         if (productImages.length === 0) {
-          productImages = ['https://via.placeholder.com/600x400'];
+          productImages = ['https://via.placeholder.com/600x400?text=No+Image'];
         }
         
+        // Calculate price
+        const actualPrice = parseFloat(p.actual_price || 0);
+        const promoPrice = p.promo_price ? parseFloat(p.promo_price) : null;
+        const hasPromo = promoPrice && promoPrice < actualPrice;
+        
+        // Get seller ID
+        const sellerId = p.seller_id || p.user_id;
+        
         // Set product
-        setProduct({
+        const newProduct = {
           id: p.id || p.product_id,
           name: p.title || p.name || 'Product',
-          price: p.ask_for_price ? 'Contact Seller' : `₦${parseFloat(p.actual_price || 0).toLocaleString()}`,
-          actual_price: p.actual_price ? `₦${parseFloat(p.actual_price).toLocaleString()}` : '',
-          promo_price: p.promo_price ? `₦${parseFloat(p.promo_price).toLocaleString()}` : '',
+          price: p.ask_for_price ? 'Contact Seller' : 
+                 (hasPromo ? `₦${promoPrice?.toLocaleString()}` : `₦${actualPrice.toLocaleString()}`),
+          actual_price: actualPrice > 0 ? `₦${actualPrice.toLocaleString()}` : '',
+          promo_price: promoPrice ? `₦${promoPrice.toLocaleString()}` : '',
           condition: p.condition || 'Unknown',
           category: p.category || 'Other',
           location: p.location || 'Unknown',
-          description: p.description || 'No description',
-          seller_id: p.seller_id || p.user_id,
+          description: p.description || 'No description available',
+          seller_id: sellerId,
           seller_name: p.seller_name || p.name || 'Seller',
-          seller_phone: p.seller_phone || p.phone_number || '',
           created_at: p.created_at,
-          seller_verified: p.badge_status === '1'
-        });
+          seller_verified: p.badge_status === '1' || p.verify_status === '1'
+        };
         
+        setProduct(newProduct);
         setImages(productImages);
+        setError(null);
         
-        // Fetch seller's other products
-        if (p.seller_id || p.user_id) {
-          const sellerId = p.seller_id || p.user_id;
-          const allResponse = await fetch(`${API_URL}/allproduct`);
-          const allData = await allResponse.json();
-          
-          const products = (allData.data || allData)
-            .filter(item => (item.seller_id || item.user_id) === sellerId && (item.id || item.product_id) != id)
-            .slice(0, 4)
-            .map(item => ({
-              id: item.id || item.product_id,
-              name: item.title || item.name,
-              price: `₦${parseFloat(item.actual_price || 0).toLocaleString()}`,
-              image: getImageUrl(item.image_url || item.image),
-              condition: item.condition,
-              location: item.location
-            }));
-          
-          setSellerProducts(products);
+        // Fetch seller phone number from all products
+        if (sellerId) {
+          await fetchSellerPhone(sellerId);
         }
         
-        setError(null);
+        // Fetch related products (from same category)
+        await fetchRelatedProducts(p.category, p.id || p.product_id);
+        
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error fetching product:', err);
         setError(err.message);
       } finally {
         setLoading(false);
+      }
+    };
+
+    const fetchSellerPhone = async (sellerId) => {
+      try {
+        console.log('Fetching seller phone for ID:', sellerId);
+        
+        const response = await fetch(`${API_URL}/allproduct`);
+        
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        // Handle response format
+        let allProducts = [];
+        if (data.data && Array.isArray(data.data)) {
+          allProducts = data.data;
+        } else if (Array.isArray(data)) {
+          allProducts = data;
+        }
+        
+        // Find a product by this seller that has phone number
+        const sellerProduct = allProducts.find(item => {
+          const itemSellerId = item.seller_id || item.user_id;
+          return itemSellerId?.toString() === sellerId?.toString() && 
+                 (item.phone_number || item.phone || item.seller_phone);
+        });
+        
+        if (sellerProduct) {
+          const phone = sellerProduct.phone_number || sellerProduct.phone || sellerProduct.seller_phone || '';
+          console.log('Found seller phone:', phone);
+          setSellerPhone(phone);
+        } else {
+          console.log('No phone found for seller');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching seller phone:', error);
+      }
+    };
+
+    const fetchRelatedProducts = async (category, currentProductId) => {
+      try {
+        setLoadingRelated(true);
+        
+        const response = await fetch(`${API_URL}/allproduct`);
+        
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        // Handle response format
+        let allProducts = [];
+        if (data.data && Array.isArray(data.data)) {
+          allProducts = data.data;
+        } else if (Array.isArray(data)) {
+          allProducts = data;
+        }
+        
+        // Filter products by same category, excluding current product
+        const related = allProducts
+          .filter(item => {
+            const itemCategory = item.category || item.product_category;
+            const itemId = item.id || item.product_id;
+            return itemCategory === category && itemId.toString() !== currentProductId.toString();
+          })
+          .slice(0, 4)
+          .map(item => {
+            // Process image
+            let itemImage = '';
+            if (item.image_url) {
+              if (typeof item.image_url === 'string' && item.image_url.startsWith('[')) {
+                try {
+                  const parsed = JSON.parse(item.image_url);
+                  itemImage = getImageUrl(parsed[0] || item.image_url);
+                } catch {
+                  itemImage = getImageUrl(item.image_url);
+                }
+              } else {
+                itemImage = getImageUrl(item.image_url);
+              }
+            }
+            
+            const itemPrice = parseFloat(item.actual_price || 0);
+            
+            return {
+              id: item.id || item.product_id,
+              name: item.title || item.name || 'Product',
+              price: item.ask_for_price ? 'Contact Seller' : `₦${itemPrice.toLocaleString()}`,
+              image: itemImage || 'https://via.placeholder.com/200x150?text=No+Image',
+              condition: item.condition || 'Unknown',
+              location: item.location || 'Unknown'
+            };
+          });
+        
+        setRelatedProducts(related);
+      } catch (error) {
+        console.error('Error fetching related products:', error);
+      } finally {
+        setLoadingRelated(false);
       }
     };
 
@@ -224,12 +410,14 @@ export default function ProductDetails() {
     const userStr = localStorage.getItem('loopmart_user');
     
     if (!token || !userStr) {
-      toast?.warning('Please login');
+      toast?.warning('Please login to connect with seller');
       navigate('/login');
       return;
     }
     
     const user = JSON.parse(userStr);
+    
+    setIsConnecting(true);
     
     try {
       const response = await fetch(`${API_URL}/v1/product/engagement`, {
@@ -247,21 +435,35 @@ export default function ProductDetails() {
       const data = await response.json();
       
       if (data.status) {
-        toast?.success('Interest sent!');
-        setShowModal(true);
+        toast?.success('Interest sent! Seller will contact you.');
+        
+        // Show WhatsApp modal first
+        setShowWhatsAppModal(true);
+        
+      } else {
+        toast?.error(data.message || 'Failed to send interest');
       }
     } catch (error) {
-      toast?.error('Failed to connect');
+      console.error('Connection error:', error);
+      toast?.error('Network error. Please check your connection.');
+    } finally {
+      setIsConnecting(false);
     }
+  };
+
+  const handleWhatsAppModalClose = () => {
+    setShowWhatsAppModal(false);
+    // After WhatsApp modal closes, show review modal
+    setShowReviewModal(true);
   };
 
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
-          <p className="mt-4">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product details...</p>
         </div>
       </div>
     );
@@ -270,17 +472,19 @@ export default function ProductDetails() {
   // Error state
   if (error || !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error || 'Product not found'}</p>
-          <button 
-            onClick={() => navigate('/')}
-            className="bg-black text-white px-6 py-2 rounded-lg"
-          >
-            Go Home
-          </button>
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Error</h2>
+            <p className="text-gray-600 mb-4">{error || 'Product not found'}</p>
+            <button 
+              onClick={() => navigate('/')}
+              className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800"
+            >
+              Go Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -293,7 +497,10 @@ export default function ProductDetails() {
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="px-4 py-3">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+          >
             <ArrowLeft size={20} />
             <span>Back</span>
           </button>
@@ -303,7 +510,7 @@ export default function ProductDetails() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images */}
+          {/* Images Section */}
           <div>
             <div className="bg-white rounded-xl border p-4">
               <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden">
@@ -315,10 +522,16 @@ export default function ProductDetails() {
                 
                 {images.length > 1 && (
                   <>
-                    <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full">
+                    <button 
+                      onClick={prevImage} 
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                    >
                       <ChevronLeft size={20} />
                     </button>
-                    <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full">
+                    <button 
+                      onClick={nextImage} 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                    >
                       <ChevronRight size={20} />
                     </button>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
@@ -330,7 +543,7 @@ export default function ProductDetails() {
 
               {/* Thumbnails */}
               {images.length > 1 && (
-                <div className="flex gap-2 mt-4 overflow-x-auto">
+                <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
                   {images.map((img, idx) => (
                     <button
                       key={idx}
@@ -347,7 +560,7 @@ export default function ProductDetails() {
             </div>
           </div>
 
-          {/* Info */}
+          {/* Info Section */}
           <div className="space-y-4">
             {/* Title & Price */}
             <div className="bg-white rounded-xl border p-6">
@@ -360,7 +573,7 @@ export default function ProductDetails() {
                 {product.seller_verified && (
                   <span className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                     <Shield size={14} />
-                    Verified
+                    Verified Seller
                   </span>
                 )}
               </div>
@@ -371,6 +584,10 @@ export default function ProductDetails() {
                 )}
                 <span className="text-3xl font-bold text-red-600">{product.price}</span>
               </div>
+              
+              {hasPromo && (
+                <p className="text-sm text-green-600 mb-2">Special Offer!</p>
+              )}
 
               <div className="flex items-center gap-4 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
@@ -410,22 +627,25 @@ export default function ProductDetails() {
             {/* Description */}
             <div className="bg-white rounded-xl border p-6">
               <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-gray-600 whitespace-pre-line">{product.description}</p>
+              <p className="text-gray-600 whitespace-pre-line leading-relaxed">
+                {product.description}
+              </p>
             </div>
 
-            {/* Actions */}
+            {/* Action Buttons */}
             <div className="bg-white rounded-xl border p-6">
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={handleConnect}
-                  className="bg-green-500 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-green-600"
+                  disabled={isConnecting}
+                  className="bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
                   <MessageCircle size={18} />
-                  Connect
+                  {isConnecting ? 'Sending...' : 'Connect'}
                 </button>
                 <button
                   onClick={() => navigate(`/shop/${product.seller_id}`)}
-                  className="bg-black text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-800"
+                  className="bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
                 >
                   <Store size={18} />
                   View Shop
@@ -435,46 +655,53 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* More from seller */}
-        {sellerProducts.length > 0 && (
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">More from this seller</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {sellerProducts.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => navigate(`/products/${item.id}`)}
-                  className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-40 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  </div>
-                  <h3 className="font-semibold mb-2 line-clamp-2">{item.name}</h3>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-red-600">{item.price}</span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getConditionBadgeColor(item.condition)}`}>
-                      {item.condition}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                    <MapPin size={10} />
-                    {item.location}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+            
+            {loadingRelated ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {relatedProducts.map((item) => (
+                  <RelatedProductCard
+                    key={item.id}
+                    product={item}
+                    onClick={() => navigate(`/products/${item.id}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* No related products message */}
+        {!loadingRelated && relatedProducts.length === 0 && (
+          <div className="mt-12 text-center py-8 bg-white rounded-xl border">
+            <p className="text-gray-500">No related products found</p>
           </div>
         )}
       </div>
 
-      {/* WhatsApp Modal */}
+      {/* WhatsApp Modal - Shows first */}
       <WhatsAppModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        sellerName={product.seller_name}
-        sellerPhone={product.seller_phone}
-        productName={product.name}
-        location={product.location}
+        isOpen={showWhatsAppModal}
+        onClose={handleWhatsAppModalClose}
+        sellerName={product?.seller_name}
+        sellerPhone={sellerPhone}
+        productName={product?.name}
+        location={product?.location}
+        onContinue={handleWhatsAppModalClose}
+      />
+
+      {/* Review Prompt Modal - Shows after WhatsApp modal closes */}
+      <ReviewPromptModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        product={product}
       />
     </div>
   );
