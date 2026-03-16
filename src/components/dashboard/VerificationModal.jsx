@@ -9,11 +9,11 @@ import {
 } from 'react-icons/fa';
 import { VscPass } from "react-icons/vsc";
 import { IoMdCheckmarkCircleOutline } from "react-icons/io";
-import { userService } from '../../services/userService';
+import { userService } from '../services/userService';
 
-// API Service
+// API Service using env variable
 const ApiService = {
-  baseURL: 'https://loopmart.ng',
+  baseURL: import.meta.env.VITE_API_URL || 'https://loopmart.ng/api',
 
   async request(endpoint, method = 'GET', data = null) {
     const token = userService.getToken();
@@ -40,17 +40,25 @@ const ApiService = {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
+      // Remove any duplicate /api in the endpoint
+      const cleanEndpoint = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+      const url = `${this.baseURL.replace('/api', '')}${cleanEndpoint}`;
+      
+      console.log('🔗 Fetching:', url);
+      console.log('🔑 Token exists:', !!token);
+      console.log('📤 Method:', method);
+      
+      const response = await fetch(url, {
         method,
         headers,
         credentials: 'include',
         body,
       });
       
-      console.log('Response status:', response.status);
+      console.log('📨 Response status:', response.status);
       
       const responseText = await response.text();
-      console.log('Response text:', responseText);
+      console.log('📨 Response text:', responseText);
       
       if (response.status === 401) {
         throw new Error('Session expired. Please log in again.');
@@ -79,7 +87,7 @@ const ApiService = {
         throw new Error('Server returned invalid JSON response');
       }
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API request failed:', error);
       throw error;
     }
   }
@@ -127,7 +135,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
       address: formData.address
     };
 
-    console.log('Sending bio data:', bioData);
+    console.log('📤 Sending bio data:', bioData);
     return await apiRequest('/v1/verify/bio', bioData);
   };
 
@@ -140,7 +148,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
     const formDataToSend = new FormData();
     formDataToSend.append('nin_file', formData.ninFile);
 
-    console.log('Sending National ID Card:', {
+    console.log('📤 Sending National ID Card:', {
       fileName: formData.ninFile.name,
       fileSize: formData.ninFile.size,
       fileType: formData.ninFile.type
@@ -159,7 +167,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
       canvasImage: formData.capturedImage
     };
 
-    console.log('Sending face image:', {
+    console.log('📤 Sending face image:', {
       dataType: 'data_url',
       length: formData.capturedImage.length,
       isBase64: true
@@ -177,7 +185,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
     const badgeFormData = new FormData();
     badgeFormData.append('badge_type', selectedPlan);
 
-    console.log('Sending badge type:', { badge_type: selectedPlan });
+    console.log('📤 Sending badge type:', { badge_type: selectedPlan });
     
     return await apiRequest('/v1/verify/badge', badgeFormData);
   };
@@ -188,7 +196,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
       throw new Error('No plan selected');
     }
 
-    console.log('Initializing payment for plan:', selectedPlan);
+    console.log('💰 Initializing payment for plan:', selectedPlan);
     
     return await apiRequest(`/v1/payment/init?badge_type=${selectedPlan}`, null, 'GET');
   };
@@ -200,7 +208,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
     setIsProcessing(true);
 
     try {
-      console.log(`Processing step ${currentStep}`);
+      console.log(`🔄 Processing step ${currentStep}`);
       
       switch (currentStep) {
         case 1:
@@ -216,7 +224,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
           }
           
           const bioResponse = await submitBioData();
-          console.log('Bio data submitted:', bioResponse);
+          console.log('✅ Bio data submitted:', bioResponse);
           
           if (bioResponse.status) {
             setSuccessMessage('Personal information submitted successfully!');
@@ -232,7 +240,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
           }
 
           const docResponse = await submitDocumentData();
-          console.log('National ID Card submitted:', docResponse);
+          console.log('✅ National ID Card submitted:', docResponse);
           
           if (docResponse.status) {
             setSuccessMessage('ID Card uploaded successfully!');
@@ -248,7 +256,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
           }
           
           const imageResponse = await submitFaceImage();
-          console.log('Face image submitted:', imageResponse);
+          console.log('✅ Face image submitted:', imageResponse);
           
           if (imageResponse.status) {
             setSuccessMessage('Face verification completed successfully!');
@@ -264,7 +272,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
           }
           
           const badgeResponse = await submitBadgeType();
-          console.log('Badge type submitted:', badgeResponse);
+          console.log('✅ Badge type submitted:', badgeResponse);
           
           if (badgeResponse.status) {
             setSuccessMessage('Plan selected successfully!');
@@ -276,7 +284,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
         
         case 6:
           const paymentResponse = await initializePayment();
-          console.log('Payment initialized:', paymentResponse);
+          console.log('✅ Payment initialized:', paymentResponse);
           
           const paystackUrl = paymentResponse.paystack_url || paymentResponse.data?.authorization_url;
           
@@ -289,11 +297,11 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             setPaymentData(paymentData);
             setSuccessMessage('Payment link generated! Click "Pay Now" to complete.');
             
-            console.log('Paystack URL:', paystackUrl);
+            console.log('🔗 Paystack URL:', paystackUrl);
             
             nextStep();
           } else {
-            console.error('Payment initialization failed:', paymentResponse);
+            console.error('❌ Payment initialization failed:', paymentResponse);
             throw new Error(paymentResponse.message || 'Failed to generate payment link. Please try again.');
           }
           break;
@@ -303,7 +311,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
           break;
       }
     } catch (error) {
-      console.error('Error in step', currentStep, ':', error);
+      console.error('❌ Error in step', currentStep, ':', error);
       setError(error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsProcessing(false);
