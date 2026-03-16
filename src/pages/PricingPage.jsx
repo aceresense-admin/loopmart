@@ -1,4 +1,4 @@
-// src/pages/PricingPage.jsx (Updated with correct API)
+// src/pages/PricingPage.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +25,7 @@ const vendorPlans = [
     name: 'Monthly Plan',
     price: '₦1,000',
     period: 'month',
-    plan: 'monthly', // for API - matches what backend expects
+    interval: 'monthly', // Changed from 'plan' to 'interval'
     description: 'Flexible monthly subscription for growing businesses',
     features: [
       { text: 'Dedicated online shop on LoopMart', icon: IoIosBusiness },
@@ -45,7 +45,7 @@ const vendorPlans = [
     name: 'Yearly Plan',
     price: '₦10,000',
     period: 'year',
-    plan: 'yearly', // for API
+    interval: 'yearly', // Changed from 'plan' to 'interval'
     description: 'Annual plan with maximum savings & benefits',
     features: [
       { text: 'All Monthly Plan features', icon: FaCheck },
@@ -281,14 +281,6 @@ export default function PricingPage() {
     }
   };
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   const scrollToPlans = () => {
     document.getElementById('pricing-plans')?.scrollIntoView({ 
       behavior: 'smooth' 
@@ -328,9 +320,9 @@ export default function PricingPage() {
         return;
       }
 
-      console.log(`Initializing ${selectedPlan.plan} subscription...`);
+      console.log(`Initializing ${selectedPlan.interval} subscription...`);
 
-      // Call the subscription API - using "plan" field as shown in your curl
+      // Call the subscription API with 'interval' field
       const response = await fetch(`${API_URL}/v1/subscription`, {
         method: 'POST',
         headers: {
@@ -339,7 +331,7 @@ export default function PricingPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          plan: selectedPlan.plan // "monthly" or "yearly" - matches your curl
+          interval: selectedPlan.interval // "monthly" or "yearly"
         })
       });
 
