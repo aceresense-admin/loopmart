@@ -1,4 +1,4 @@
-// src/pages/PricingPage.jsx
+// src/pages/PricingPage.jsx (Updated with correct API)
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import {
 import { MdAttachMoney, MdTrendingUp } from 'react-icons/md';
 import { IoIosBusiness } from 'react-icons/io';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { useToast } from '../contexts/ToastContext';
 import logo from '../assets/logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://loopmart.ng/api';
@@ -24,7 +25,7 @@ const vendorPlans = [
     name: 'Monthly Plan',
     price: '₦1,000',
     period: 'month',
-    interval: 'monthly', // for API
+    plan: 'monthly', // for API - matches what backend expects
     description: 'Flexible monthly subscription for growing businesses',
     features: [
       { text: 'Dedicated online shop on LoopMart', icon: IoIosBusiness },
@@ -44,7 +45,7 @@ const vendorPlans = [
     name: 'Yearly Plan',
     price: '₦10,000',
     period: 'year',
-    interval: 'yearly', // for API
+    plan: 'yearly', // for API
     description: 'Annual plan with maximum savings & benefits',
     features: [
       { text: 'All Monthly Plan features', icon: FaCheck },
@@ -165,7 +166,7 @@ const PaymentModal = ({ isOpen, onClose, plan, onConfirm, processing }) => {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> This will initialize your subscription. You'll be redirected to complete payment.
+            <strong>Note:</strong> You'll be redirected to Paystack to complete your payment securely.
           </p>
         </div>
 
@@ -185,7 +186,7 @@ const PaymentModal = ({ isOpen, onClose, plan, onConfirm, processing }) => {
                 <span>Processing...</span>
               </div>
             ) : (
-              `Confirm ${plan?.name}`
+              `Proceed to Payment`
             )}
           </button>
           <button
@@ -255,6 +256,7 @@ export default function PricingPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
+  const toast = useToast();
   
   // Use the subscription context
   const { hasSubscription, setSubscription, checkSubscription } = useSubscription();
@@ -305,10 +307,8 @@ export default function PricingPage() {
     
     // Check if user is logged in
     if (!isUserLoggedIn()) {
-      // If not logged in, show login modal
       setShowLoginModal(true);
     } else {
-      // If logged in, show payment modal
       setShowPaymentModal(true);
     }
   };
@@ -322,12 +322,15 @@ export default function PricingPage() {
       const token = getToken();
       
       if (!token) {
-        throw new Error('No authentication token found');
+        toast?.error('Authentication failed. Please login again.');
+        setShowPaymentModal(false);
+        setShowLoginModal(true);
+        return;
       }
 
-      console.log(`Initializing ${selectedPlan.interval} subscription...`);
+      console.log(`Initializing ${selectedPlan.plan} subscription...`);
 
-      // Call the subscription API
+      // Call the subscription API - using "plan" field as shown in your curl
       const response = await fetch(`${API_URL}/v1/subscription`, {
         method: 'POST',
         headers: {
@@ -336,39 +339,32 @@ export default function PricingPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          interval: selectedPlan.interval // "monthly" or "yearly"
+          plan: selectedPlan.plan // "monthly" or "yearly" - matches your curl
         })
       });
 
       const data = await response.json();
       console.log('Subscription API response:', data);
 
-      if (response.ok && data.status) {
-        // Success - subscription initialized
-        // You might get a payment URL or confirmation
+      if (data.status && data.data?.authorization_url) {
+        // Success - subscription initialized, redirect to Paystack
+        toast?.success('Transaction initialized! Redirecting to payment...');
         
-        // Calculate expiry date based on plan duration
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + selectedPlan.durationDays);
-        
-        // Update subscription context
-        setSubscription(true, expiryDate);
-        
-        // Close payment modal
+        // Close modal
         setShowPaymentModal(false);
         
-        // Show success message
-        alert(`Successfully subscribed to ${selectedPlan.name}! You can now start selling.`);
+        // Redirect to Paystack checkout
+        window.location.href = data.data.authorization_url;
         
-        // Redirect to start selling
-        navigate('/start-selling');
       } else {
         // Handle API error
-        alert(data.message || 'Failed to initialize subscription. Please try again.');
+        toast?.error(data.message || 'Failed to initialize subscription. Please try again.');
+        setShowPaymentModal(false);
       }
     } catch (error) {
       console.error('Subscription error:', error);
-      alert('There was an error processing your subscription. Please check your connection and try again.');
+      toast?.error('Network error. Please check your connection and try again.');
+      setShowPaymentModal(false);
     } finally {
       setProcessingPlan(null);
       setSelectedPlan(null);
@@ -385,10 +381,41 @@ export default function PricingPage() {
     } else {
       // If not subscribed, stay on pricing page and scroll to plans
       scrollToPlans();
-      // Optional: Show a message
-      alert('Please subscribe to a plan to start selling!');
+      toast?.info('Please subscribe to a plan to start selling!');
     }
   };
+
+  // Fetch subscription status on mount
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      const token = getToken();
+      if (!token) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/v1/subscription`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status && data.data) {
+          // Update subscription context with data from API
+          if (data.data.active) {
+            const expiryDate = new Date(data.data.expires_at);
+            setSubscription(true, expiryDate);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
+    
+    fetchSubscriptionStatus();
+  }, [setSubscription]);
 
   // Subscription Status Banner (if already subscribed)
   const SubscriptionStatusBanner = () => {
@@ -446,7 +473,7 @@ export default function PricingPage() {
         processing={processingPlan === selectedPlan?.id}
       />
 
-      {/* Header with Back Button and Logo */}
+      {/* Header with Logo */}
       <div className="py-4 border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
