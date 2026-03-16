@@ -25,7 +25,7 @@ const vendorPlans = [
     name: 'Monthly Plan',
     price: '₦1,000',
     period: 'month',
-    interval: 'monthly', // Changed from 'plan' to 'interval'
+    interval: 'monthly',
     description: 'Flexible monthly subscription for growing businesses',
     features: [
       { text: 'Dedicated online shop on LoopMart', icon: IoIosBusiness },
@@ -45,7 +45,7 @@ const vendorPlans = [
     name: 'Yearly Plan',
     price: '₦10,000',
     period: 'year',
-    interval: 'yearly', // Changed from 'plan' to 'interval'
+    interval: 'yearly',
     description: 'Annual plan with maximum savings & benefits',
     features: [
       { text: 'All Monthly Plan features', icon: FaCheck },
@@ -281,6 +281,14 @@ export default function PricingPage() {
     }
   };
 
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   const scrollToPlans = () => {
     document.getElementById('pricing-plans')?.scrollIntoView({ 
       behavior: 'smooth' 
@@ -320,7 +328,26 @@ export default function PricingPage() {
         return;
       }
 
-      console.log(`Initializing ${selectedPlan.interval} subscription...`);
+      console.log('🔍 Selected Plan:', selectedPlan);
+      console.log('📦 Interval value:', selectedPlan.interval);
+      console.log('📦 Plan name:', selectedPlan.name);
+      console.log('📦 Plan ID:', selectedPlan.id);
+
+      // Make sure interval exists
+      if (!selectedPlan.interval) {
+        toast?.error('Invalid plan selected. Missing interval.');
+        setProcessingPlan(null);
+        return;
+      }
+
+      // Prepare request body
+      const requestBody = {
+        interval: selectedPlan.interval // This should be 'monthly' or 'yearly'
+      };
+      
+      console.log('📤 Sending request to:', `${API_URL}/v1/subscription`);
+      console.log('📤 Request body:', requestBody);
+      console.log('🔑 Token exists:', !!token);
 
       // Call the subscription API with 'interval' field
       const response = await fetch(`${API_URL}/v1/subscription`, {
@@ -330,13 +357,13 @@ export default function PricingPage() {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          interval: selectedPlan.interval // "monthly" or "yearly"
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('📥 Response status:', response.status);
+      
       const data = await response.json();
-      console.log('Subscription API response:', data);
+      console.log('📥 Full API Response:', data);
 
       if (data.status && data.data?.authorization_url) {
         // Success - subscription initialized, redirect to Paystack
@@ -350,11 +377,13 @@ export default function PricingPage() {
         
       } else {
         // Handle API error
-        toast?.error(data.message || 'Failed to initialize subscription. Please try again.');
+        const errorMessage = data.message || data.error || 'Failed to initialize subscription. Please try again.';
+        console.error('❌ API Error:', errorMessage, data);
+        toast?.error(errorMessage);
         setShowPaymentModal(false);
       }
     } catch (error) {
-      console.error('Subscription error:', error);
+      console.error('❌ Network/Subscription error:', error);
       toast?.error('Network error. Please check your connection and try again.');
       setShowPaymentModal(false);
     } finally {
@@ -393,6 +422,7 @@ export default function PricingPage() {
         });
         
         const data = await response.json();
+        console.log('📥 Subscription status response:', data);
         
         if (data.status && data.data) {
           // Update subscription context with data from API
