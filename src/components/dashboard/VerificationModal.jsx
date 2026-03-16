@@ -1,3 +1,4 @@
+// src/components/VerificationModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -8,41 +9,14 @@ import {
 } from 'react-icons/fa';
 import { VscPass } from "react-icons/vsc";
 import { IoMdCheckmarkCircleOutline } from "react-icons/io";
-import { userService } from '../../services/userService';
-import ApiService from '../../services/api';
+import { userService } from '../services/userService';
 
-export default function VerificationModal({ isOpen, onClose, user }) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [paymentData, setPaymentData] = useState(null);
-  
-  const [formData, setFormData] = useState({
-    name: user?.name || user?.username || '',
-    email: user?.email || '',
-    gender: '',
-    nationality: '',
-    phone: '',
-    address: '',
-    ninFile: null,
-    faceImage: null,
-    isCameraActive: false,
-    capturedImage: null,
-    isCameraReady: false,
-  });
+// API Service
+const ApiService = {
+  baseURL: 'https://loopmart.ng',
 
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  // API request function
-  const apiRequest = async (endpoint, data, method = 'POST') => {
+  async request(endpoint, method = 'GET', data = null) {
     const token = userService.getToken();
-    
-    console.log('Token exists:', !!token);
-    console.log('Making request to:', endpoint);
     
     if (!token) {
       throw new Error('No authentication token found. Please log in again.');
@@ -66,7 +40,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
     }
 
     try {
-      const response = await fetch(`https://loopmart.ng${endpoint}`, {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
         method,
         headers,
         credentials: 'include',
@@ -108,6 +82,38 @@ export default function VerificationModal({ isOpen, onClose, user }) {
       console.error('API request failed:', error);
       throw error;
     }
+  }
+};
+
+export default function VerificationModal({ isOpen, onClose, user }) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
+  
+  const [formData, setFormData] = useState({
+    name: user?.name || user?.username || '',
+    email: user?.email || '',
+    gender: '',
+    nationality: '',
+    phone: '',
+    address: '',
+    ninFile: null,
+    faceImage: null,
+    isCameraActive: false,
+    capturedImage: null,
+    isCameraReady: false,
+  });
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // API request function
+  const apiRequest = async (endpoint, data, method = 'POST') => {
+    return await ApiService.request(endpoint, method, data);
   };
 
   // Step 2: Submit bio data
@@ -547,6 +553,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 1: Benefits Overview */}
             {currentStep === 1 && (
               <motion.div
+                key="step1"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -614,6 +621,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 2: Personal Information */}
             {currentStep === 2 && (
               <motion.div
+                key="step2"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -746,6 +754,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 3: National ID Card Upload */}
             {currentStep === 3 && (
               <motion.div
+                key="step3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -826,6 +835,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 4: Face Capture */}
             {currentStep === 4 && (
               <motion.div
+                key="step4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -958,6 +968,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 5: Plan Selection */}
             {currentStep === 5 && (
               <motion.div
+                key="step5"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -1073,6 +1084,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 6: Payment Link Generation */}
             {currentStep === 6 && (
               <motion.div
+                key="step6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -1132,6 +1144,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
             {/* Step 7: Paystack Payment */}
             {currentStep === 7 && (
               <motion.div
+                key="step7"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
@@ -1201,6 +1214,7 @@ export default function VerificationModal({ isOpen, onClose, user }) {
               className="flex items-center gap-2 px-6 py-3 rounded-2xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaArrowLeft />
+              Back
             </motion.button>
 
             <motion.button
