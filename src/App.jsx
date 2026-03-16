@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import { NotificationProvider } from './contexts/NotificationContext'
@@ -34,7 +35,7 @@ function App() {
                 <Route path="/products/:id" element={<ProductDetails />} />
                 <Route path="/shop/:slug" element={<ShopPage />} />
                 
-                {/* Auth routes */}
+                {/* Auth routes - CORRECT PATHS */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
