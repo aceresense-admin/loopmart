@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fa';
 import { VscPass } from "react-icons/vsc";
 import { IoMdCheckmarkCircleOutline } from "react-icons/io";
-import { userService } from '../services/userService';
+import { userService } from '../../services/userService';
 
 // API Service
 const ApiService = {
