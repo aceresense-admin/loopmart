@@ -649,8 +649,8 @@ export default function CategoriesSection() {
       if (data.status === true || data.success === true) {
         showToast('success', `Interest sent! Seller will contact you.`, 'Success! 🎯');
         
-        setConnectedProduct(product);
-        setShowReviewModal(true);
+        
+        
         
         setTimeout(() => {
           navigate(`/products/${product.id}`);
