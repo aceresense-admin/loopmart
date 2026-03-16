@@ -226,13 +226,21 @@ const LoginPromptModal = ({ isOpen, onClose, onLogin, onSignup }) => {
         
         <div className="flex flex-col gap-3">
           <button
-            onClick={onLogin}
+            onClick={() => {
+              onLogin();
+              // Optional: Add toast when they click
+              toast?.info('Redirecting to login page...');
+            }}
             className="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-600 transition"
           >
             Login to Your Account
           </button>
           <button
-            onClick={onSignup}
+            onClick={() => {
+              onSignup();
+              // Optional: Add toast when they click
+              toast?.info('Redirecting to signup page...');
+            }}
             className="w-full py-3 border-2 border-black text-black font-bold rounded-lg hover:bg-gray-50 transition"
           >
             Create New Account
@@ -248,7 +256,6 @@ const LoginPromptModal = ({ isOpen, onClose, onLogin, onSignup }) => {
     </div>
   );
 };
-
 export default function PricingPage() {
   const [activeFAQ, setActiveFAQ] = useState(null);
   const [processingPlan, setProcessingPlan] = useState(null);
@@ -326,12 +333,15 @@ export default function PricingPage() {
     try {
       const token = getToken();
       
-      if (!token) {
-        toast?.error('Authentication failed. Please login again.');
-        setShowPaymentModal(false);
-        setShowLoginModal(true);
-        return;
-      }
+     if (!token) {
+  toast?.error('Authentication failed. Please login again.', 5000, { 
+    path: '/login',
+    label: 'Login now'
+  });
+  setShowPaymentModal(false);
+  setShowLoginModal(true);
+  return;
+}
 
       console.log('🔍 Selected Plan:', selectedPlan);
       console.log('📦 Interval value:', selectedPlan.interval);
@@ -397,19 +407,22 @@ export default function PricingPage() {
     }
   };
 
-  const handleStartSelling = () => {
-    // First check if user is subscribed
-    const isSubscribed = hasSubscription || checkSubscription();
-    
-    if (isSubscribed) {
-      // If subscribed, go to start selling page
-      navigate('/start-selling');
-    } else {
-      // If not subscribed, stay on pricing page and scroll to plans
-      scrollToPlans();
-      toast?.info('Please subscribe to a plan to start selling!');
-    }
-  };
+ const handleStartSelling = () => {
+  // First check if user is subscribed
+  const isSubscribed = hasSubscription || checkSubscription();
+  
+  if (isSubscribed) {
+    // If subscribed, go to start selling page
+    navigate('/start-selling');
+  } else {
+    // If not subscribed, stay on pricing page and scroll to plans
+    scrollToPlans();
+    toast?.info('Please subscribe to a plan to start selling!', 5000, { 
+      path: '/pricing#pricing-plans',
+      label: 'View plans'
+    });
+  }
+};
 
   // Fetch subscription status on mount
   useEffect(() => {
