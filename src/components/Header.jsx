@@ -1,3 +1,4 @@
+// src/components/Header.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,8 +12,8 @@ import {
 import { RxAvatar } from "react-icons/rx";
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from '@headlessui/react';
 import { Dialog } from '@headlessui/react';
-import { userService } from '../services/userService';
-import { AuthService } from '../services/auth';
+import { userService } from '../../services/userService';
+import { AuthService } from '../../services/auth';
 import logo from '../assets/logo.png';
 
 // Helper functions
@@ -34,7 +35,7 @@ const getInitials = (email, name, username) => {
 const getProfileImageUrl = (photoFilename) => {
   if (!photoFilename) return null;
   if (photoFilename.startsWith('http')) return photoFilename;
-  return `https://loopmart.ng/uploads/users/${photoFilename}`; // Changed from profile to users
+  return `https://loopmart.ng/uploads/users/${photoFilename}`;
 };
 
 export default function Header({ onModalStateChange }) {
@@ -278,8 +279,10 @@ export default function Header({ onModalStateChange }) {
 
   // ========== AUTH FUNCTIONS ==========
   const handleGoogleLogin = () => {
+    // Get base URL by removing '/api' from API_URL if present
+    const baseUrl = API_URL.replace('/api', '');
     const redirectUrl = encodeURIComponent(window.location.origin);
-    window.location.href = `${import.meta.env.VITE_GOOGLE_AUTH_URL}?redirect=${redirectUrl}`;
+    window.location.href = `${baseUrl}/auth/google/redirect?redirect=${redirectUrl}`;
   };
 
   const handleLogin = async (e) => {
@@ -883,7 +886,23 @@ export default function Header({ onModalStateChange }) {
 
   const NotificationDropdown = () => (
     <div className="relative" ref={notificationRef}>
-     
+      <button 
+        className="relative bg-white/30 backdrop-blur-md p-2 rounded-lg text-black border border-white/40 shadow hover:bg-white/40 transition"
+        onClick={() => {
+          setShowNotifications(!showNotifications);
+          if (!showNotifications) loadNotifications();
+        }}
+        disabled={!user}
+        title={user ? 'Notifications' : 'Login to see notifications'}
+        data-bell-icon
+      >
+        <FaBell size={18} />
+        {user && unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full border-2 border-white flex items-center justify-center animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
 
       <AnimatePresence>
         {showNotifications && user && (
@@ -1246,7 +1265,7 @@ export default function Header({ onModalStateChange }) {
                       {profilePictureUrl ? (
                         <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-md backdrop-blur-sm">
                           <img 
-                            src={`https://loopmart.ng/uploads/users/${user.photo_url}`} 
+                            src={profilePictureUrl} 
                             alt="Profile" 
                             className="object-cover w-full h-full"
                             onError={(e) => {
