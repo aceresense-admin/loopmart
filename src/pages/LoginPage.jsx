@@ -1,16 +1,19 @@
 // pages/LoginPage.jsx
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaGoogle, FaEye, FaEyeSlash, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { AuthService } from '../services/auth';
 import { userService } from '../services/userService';
+import { useToast } from '../contexts/ToastContext';
 import logo from '../assets/logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://loopmart.ng/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -20,6 +23,27 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState({ text: '', type: '' });
+
+  // Get redirect URL from query params
+  const getRedirectPath = () => {
+    const params = new URLSearchParams(location.search);
+    let redirect = params.get('redirect') || '/';
+    
+    // Ensure redirect starts with a slash
+    if (redirect && !redirect.startsWith('/')) {
+      redirect = '/' + redirect;
+    }
+    
+    // Remove any duplicate 'login' from the path
+    redirect = redirect.replace('/login', '');
+    
+    // If redirect is empty after cleaning, go to home
+    if (!redirect || redirect === '') {
+      redirect = '/';
+    }
+    
+    return redirect;
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -106,29 +130,35 @@ export default function LoginPage() {
         
         showMessage('Login successful! Redirecting...', 'success');
         
-        // Check for redirect URL
-        const params = new URLSearchParams(window.location.search);
-        const redirect = params.get('redirect') || '/';
+        // Get the redirect path
+        const redirectPath = getRedirectPath();
+        console.log('Redirecting to:', redirectPath);
+        
+        // Show success toast with redirect info
+        toast?.success('Login successful!', 3000);
         
         setTimeout(() => {
-          navigate(redirect);
+          navigate(redirectPath);
         }, 1500);
         
       } else {
         const errorMessage = data.message || data.error || 'Invalid email or password';
         showMessage(errorMessage, 'error');
+        toast?.error(errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
       showMessage('Login failed. Please check your credentials.', 'error');
+      toast?.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    const redirectUrl = encodeURIComponent(window.location.origin);
-    window.location.href = `${import.meta.env.VITE_GOOGLE_AUTH_URL}?redirect=${redirectUrl}`;
+    const baseUrl = API_URL.replace('/api', '');
+    const redirectUrl = encodeURIComponent(window.location.origin + '/auth/callback');
+    window.location.href = `${baseUrl}/auth/google/redirect?redirect=${redirectUrl}`;
   };
 
   return (

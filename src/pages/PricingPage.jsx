@@ -493,11 +493,11 @@ export default function PricingPage() {
         }}
         onLogin={() => {
           setShowLoginModal(false);
-          navigate('/login?redirect=pricing');
+            navigate('/login?redirect=/pricing');
         }}
         onSignup={() => {
           setShowLoginModal(false);
-          navigate('/signup?redirect=pricing');
+           navigate('/signup?redirect=/pricing'); 
         }}
       />
 
