@@ -12,8 +12,8 @@ import {
 import { RxAvatar } from "react-icons/rx";
 import { Menu, MenuButton, MenuItems, MenuItem, Transition } from '@headlessui/react';
 import { Dialog } from '@headlessui/react';
-import { userService } from '../../services/userService';
-import { AuthService } from '../../services/auth';
+import { userService } from '../services/userService';
+import { AuthService } from '../services/auth';
 import logo from '../assets/logo.png';
 
 // Helper functions
