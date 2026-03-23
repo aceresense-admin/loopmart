@@ -4,14 +4,12 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import BannerCarousel from "../components/BannerCarousel";
 import CategoriesSection from "../components/CategoriesSection";
-import GlassAd, { useAdTiming } from "../components/GlassAd";
 import Footer from "../components/Footer";
 import logo from "../assets/logo.png";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [isAnyModalActive, setIsAnyModalActive] = useState(false);
-  const { showAd, handleCloseAd } = useAdTiming(isAnyModalActive);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ 
     type: 'success', 
@@ -98,11 +96,6 @@ export default function HomePage() {
       <main className="flex-1 bg-gray-50 pt-16">
         <BannerCarousel />
         <CategoriesSection />
-        <GlassAd 
-          showAd={showAd} 
-          onClose={handleCloseAd}
-          isAnyOtherModalActive={isAnyModalActive}
-        />
       </main>
       
       <Footer />
