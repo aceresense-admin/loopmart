@@ -46,7 +46,7 @@ function App() {
                 <Route path="/products/:id" element={<ProductDetails />} />
                 <Route path="/shop/:slug" element={<ShopPage />} />
                 
-                {/* Auth routes - CORRECT PATHS */}
+                {/* Auth routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />

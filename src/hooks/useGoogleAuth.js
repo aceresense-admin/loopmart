@@ -16,7 +16,7 @@ export const useGoogleAuth = () => {
       const token = urlParams.get('token');
       
       if (token) {
-        console.log('🔑 Google login successful! Token received');
+        console.log('🔑 Google login successful! Token received:', token.substring(0, 20) + '...');
         
         try {
           // Store the token
@@ -45,7 +45,7 @@ export const useGoogleAuth = () => {
             // Clear the URL to remove the token from the address bar
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Show success notification
+            // Dispatch custom event for toast notification
             window.dispatchEvent(new CustomEvent('show-toast', {
               detail: {
                 type: 'success',
@@ -62,7 +62,6 @@ export const useGoogleAuth = () => {
             
           } else {
             console.error('Failed to fetch user data:', response.status);
-            // Clear invalid token
             localStorage.removeItem('loopmart_token');
             
             window.dispatchEvent(new CustomEvent('show-toast', {
@@ -77,15 +76,6 @@ export const useGoogleAuth = () => {
         } catch (error) {
           console.error('Error fetching user data:', error);
           localStorage.removeItem('loopmart_token');
-          
-          window.dispatchEvent(new CustomEvent('show-toast', {
-            detail: {
-              type: 'error',
-              message: 'Network error. Please try again.',
-              title: 'Error',
-              duration: 5000
-            }
-          }));
         }
       }
     };
