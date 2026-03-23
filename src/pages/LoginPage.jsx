@@ -155,11 +155,11 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const baseUrl = API_URL.replace('/api', '');
-    const redirectUrl = encodeURIComponent(window.location.origin + '/auth/callback');
-    window.location.href = `${baseUrl}/auth/google/redirect?redirect=${redirectUrl}`;
-  };
+ const handleGoogleLogin = () => {
+  const googleAuthUrl = import.meta.env.VITE_GOOGLE_AUTH_URL || 'https://loopmart.ng/auth/google/redirect';
+  const redirectUrl = encodeURIComponent(window.location.origin);
+  window.location.href = `${googleAuthUrl}?redirect=${redirectUrl}`;
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-100 flex items-center justify-center p-4">

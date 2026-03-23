@@ -279,10 +279,9 @@ export default function Header({ onModalStateChange }) {
 
   // ========== AUTH FUNCTIONS ==========
 const handleGoogleLogin = () => {
-  const baseUrl = API_URL.replace('/api', '');
+  const googleAuthUrl = import.meta.env.VITE_GOOGLE_AUTH_URL || 'https://loopmart.ng/auth/google/redirect';
   const redirectUrl = encodeURIComponent(window.location.origin);
-  // Add /redirect to the endpoint
-  window.location.href = `${baseUrl}/auth/google/redirect?redirect=${redirectUrl}`;
+  window.location.href = `${googleAuthUrl}?redirect=${redirectUrl}`;
 };
 
   const handleLogin = async (e) => {

@@ -21,12 +21,23 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyOtpPage from './pages/VerifyOtpPage'
 
+// Import Google Auth Hook
+import { useGoogleAuth } from './hooks/useGoogleAuth';
+
+// Component to handle Google OAuth callback
+function GoogleAuthHandler() {
+  useGoogleAuth();
+  return null;
+}
+
 function App() {
   return (
     <SubscriptionProvider>
       <NotificationProvider>
         <ToastProvider>
           <Router>
+            {/* Google Auth Handler - runs once to check for OAuth tokens */}
+            <GoogleAuthHandler />
             <RootLayout>
               <Routes>
                 {/* Public routes - accessible to everyone */}

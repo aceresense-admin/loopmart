@@ -166,10 +166,11 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const redirectUrl = encodeURIComponent(window.location.origin);
-    window.location.href = `${import.meta.env.VITE_GOOGLE_AUTH_URL}?redirect=${redirectUrl}`;
-  };
+ const handleGoogleLogin = () => {
+  const googleAuthUrl = import.meta.env.VITE_GOOGLE_AUTH_URL || 'https://loopmart.ng/auth/google/redirect';
+  const redirectUrl = encodeURIComponent(window.location.origin);
+  window.location.href = `${googleAuthUrl}?redirect=${redirectUrl}`;
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-100 flex items-center justify-center p-4">
