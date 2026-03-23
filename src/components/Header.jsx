@@ -279,10 +279,9 @@ export default function Header({ onModalStateChange }) {
 
   // ========== AUTH FUNCTIONS ==========
 const handleGoogleLogin = () => {
-  // Get base URL by removing '/api' from API_URL
   const baseUrl = API_URL.replace('/api', '');
   const redirectUrl = encodeURIComponent(window.location.origin);
-  // Use the correct endpoint - web route
+  // Add /redirect to the endpoint
   window.location.href = `${baseUrl}/auth/google/redirect?redirect=${redirectUrl}`;
 };
 
